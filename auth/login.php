@@ -1,12 +1,9 @@
 <?php
-require_once "../config/session.php";
+session_start();
 require_once "../config/database.php";
 require_once "../includes/functions.php";
 
 $login_err = "";
-if(isset($_GET["timeout"])) {
-    $login_err = "Your session has expired. Please log in again.";
-}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Check if this is an OTP verification
@@ -61,9 +58,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         // Store OTP in session
                         $_SESSION["pending_user_id"] = $user["id"];
                         $_SESSION["otp_secret"] = $otp_secret;
-                        
-                        // For now, we'll just show the OTP on screen
-                        // In production, this should be sent via email
                         $_SESSION["demo_otp"] = $otp_secret;
                         
                         header("location: verify_otp.php");

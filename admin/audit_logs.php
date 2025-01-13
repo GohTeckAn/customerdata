@@ -3,14 +3,14 @@ session_start();
 require_once "../config/database.php";
 require_once "../includes/functions.php";
 
-checkLogin();
+// Check if user is admin
 checkAdmin();
 
-// Fetch audit logs with user and customer information
+// Fetch all audit logs with user and customer information
 $sql = "SELECT al.*, u.username, c.name as customer_name 
         FROM audit_logs al 
         JOIN users u ON al.user_id = u.id 
-        JOIN customers c ON al.record_id = c.id 
+        LEFT JOIN customers c ON al.record_id = c.id 
         ORDER BY al.timestamp DESC";
 $result = mysqli_query($conn, $sql);
 ?>
@@ -33,34 +33,22 @@ $result = mysqli_query($conn, $sql);
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        .changes-cell {
-            max-width: 300px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .changes-modal pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
+        .modal-lg {
+            max-width: 800px;
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
-        <a class="navbar-brand" href="../index.php">TM Customer Data System</a>
-        <div class="navbar-nav ml-auto">
-            <a class="nav-item nav-link" href="manage_users.php">Manage Users</a>
-            <a class="nav-item nav-link" href="../auth/logout.php">Logout</a>
-        </div>
-    </nav>
-
     <div class="wrapper">
-        <h2>Audit Logs</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Audit Logs</h2>
+            <a href="../index.php" class="btn btn-secondary">Back to Dashboard</a>
+        </div>
 
         <table id="auditTable" class="table table-striped">
             <thead>
                 <tr>
-                    <th>Timestamp</th>
+                    <th>Date</th>
                     <th>User</th>
                     <th>Customer</th>
                     <th>Action</th>
@@ -74,11 +62,29 @@ $result = mysqli_query($conn, $sql);
                         <td><?php echo htmlspecialchars($row['username']); ?></td>
                         <td><?php echo htmlspecialchars($row['customer_name']); ?></td>
                         <td><?php echo htmlspecialchars($row['action_type']); ?></td>
-                        <td class="changes-cell">
-                            <a href="#" class="view-changes" data-toggle="modal" data-target="#changesModal" 
-                               data-changes='<?php echo htmlspecialchars($row['changes']); ?>'>
-                                View Changes
-                            </a>
+                        <td>
+                            <?php 
+                            $changes = json_decode($row['changes'], true);
+                            if($changes) {
+                                if(isset($changes['action']) && $changes['action'] === 'create') {
+                                    echo '<button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#changesModal" '
+                                        . 'data-changes="Created with values:<br>';
+                                    foreach($changes['fields'] as $field => $value) {
+                                        echo htmlspecialchars($field) . ': ' . htmlspecialchars($value) . '<br>';
+                                    }
+                                    echo '">View Changes</button>';
+                                } else {
+                                    $changesText = '';
+                                    foreach($changes as $field => $change) {
+                                        $changesText .= htmlspecialchars($field) . ': ' 
+                                                   . htmlspecialchars($change['old']) . ' → ' 
+                                                   . htmlspecialchars($change['new']) . '<br>';
+                                    }
+                                    echo '<button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#changesModal" '
+                                        . 'data-changes="' . $changesText . '">View Changes</button>';
+                                }
+                            }
+                            ?>
                         </td>
                     </tr>
                 <?php endwhile; ?>
@@ -87,35 +93,40 @@ $result = mysqli_query($conn, $sql);
     </div>
 
     <!-- Changes Modal -->
-    <div class="modal fade changes-modal" id="changesModal" tabindex="-1" role="dialog">
+    <div class="modal fade" id="changesModal" tabindex="-1" role="dialog" aria-labelledby="changesModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Changes Details</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
+                    <h5 class="modal-title" id="changesModalLabel">Changes Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <pre id="changesContent"></pre>
+                <div class="modal-body" id="changesModalBody">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function() {
             $('#auditTable').DataTable({
                 "order": [[0, "desc"]]
             });
 
-            $('.view-changes').click(function() {
-                let changes = JSON.parse($(this).data('changes'));
-                $('#changesContent').text(JSON.stringify(changes, null, 2));
+            $('#changesModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                var changes = button.data('changes');
+                var modal = $(this);
+                modal.find('.modal-body').html(changes);
             });
         });
     </script>

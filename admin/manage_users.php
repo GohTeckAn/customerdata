@@ -83,6 +83,9 @@ $result = mysqli_query($conn, $sql);
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
+        .action-buttons .btn {
+            margin: 0 2px;
+        }
     </style>
 </head>
 <body>
@@ -95,7 +98,12 @@ $result = mysqli_query($conn, $sql);
     </nav>
 
     <div class="wrapper">
-        <h2>Manage Users</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Manage Users</h2>
+            <div>
+                <button class="btn btn-success" data-toggle="modal" data-target="#createUserModal">Create New User</button>
+            </div>
+        </div>
 
         <?php if(!empty($errors)): ?>
             <div class="alert alert-danger">
@@ -111,10 +119,6 @@ $result = mysqli_query($conn, $sql);
             </div>
         <?php endif; ?>
 
-        <!-- Create User Form -->
-        <button class="btn btn-success mb-4" data-toggle="modal" data-target="#createUserModal">Create New User</button>
-
-        <!-- Users Table -->
         <table id="usersTable" class="table table-striped">
             <thead>
                 <tr>
@@ -130,7 +134,7 @@ $result = mysqli_query($conn, $sql);
                         <td><?php echo htmlspecialchars($row['username']); ?></td>
                         <td><?php echo htmlspecialchars($row['email']); ?></td>
                         <td><?php echo htmlspecialchars($row['role']); ?></td>
-                        <td>
+                        <td class="action-buttons">
                             <?php if($row['id'] != $_SESSION['id']): ?>
                                 <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this user?');">
                                     <input type="hidden" name="action" value="delete">
@@ -138,6 +142,7 @@ $result = mysqli_query($conn, $sql);
                                     <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                                 </form>
                             <?php endif; ?>
+                            <a href="edit_user.php?id=<?php echo $row['id']; ?>" class="btn btn-primary btn-sm">Edit</a>
                         </td>
                     </tr>
                 <?php endwhile; ?>

@@ -47,7 +47,7 @@ function createAuditLog($conn, $user_id, $action_type, $record_id, $changes) {
     mysqli_stmt_execute($stmt);
 }
 
-// Function to check if user is logged in
+// Simple login check
 function checkLogin() {
     if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
         header("location: /customerdata/auth/login.php");
@@ -55,7 +55,7 @@ function checkLogin() {
     }
 }
 
-// Function to check if user is admin
+// Simple admin check
 function checkAdmin() {
     if(!isset($_SESSION["role"]) || $_SESSION["role"] !== "admin") {
         header("location: /customerdata/index.php");

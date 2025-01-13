@@ -5,7 +5,7 @@ ini_set('session.cookie_lifetime', 1800);    // Client-side cookie timeout
 
 // Session security settings
 ini_set('session.cookie_httponly', 1);       // Prevent JavaScript access to session cookie
-ini_set('session.cookie_secure', 1);         // Only send cookie over HTTPS
+ini_set('session.cookie_secure', 0);         // Allow cookies over HTTP for localhost
 ini_set('session.use_strict_mode', 1);       // Only use cookies created by the server
 ini_set('session.use_only_cookies', 1);      // Only use cookies for session handling
 ini_set('session.cookie_samesite', 'Lax');   // Protect against CSRF attacks
@@ -47,7 +47,9 @@ function regenerateSessionId() {
 }
 
 // Start session with secure settings
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Run security checks
 sessionTimeoutCheck();
@@ -57,5 +59,4 @@ regenerateSessionId();
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
-
 ?>
