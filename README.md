@@ -45,9 +45,7 @@ A secure web-based system for managing Telekom Malaysia (TM) customer data, feat
 
 2. Start XAMPP Apache and MySQL services
 
-3. The database will be created automatically on first access, or you can manually import:
-   - Open phpMyAdmin (http://localhost/phpmyadmin)
-   - Import the SQL file from `database/init.sql`
+3. The database will be created automatically on first access (which means you can directly enter index.php without need to deal with database).
 
 4. Access the system:
    ```
