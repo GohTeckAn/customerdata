@@ -61,6 +61,15 @@ $sql = "CREATE TABLE IF NOT EXISTS audit_logs (
 )";
 mysqli_query($conn, $sql);
 
+$sql = "CREATE TABLE IF NOT EXISTS login_attempts (
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    ip_address VARCHAR(45) NOT NULL,
+    success INT(1) NOT NULL,
+    attempted_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
+)";
+mysqli_query($conn, $sql);
+
 // Create default admin account if not exists
 $default_admin_password = password_hash('admin123', PASSWORD_DEFAULT);
 $sql = "INSERT IGNORE INTO users (username, password, role, email) 

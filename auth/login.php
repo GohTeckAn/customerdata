@@ -4,7 +4,51 @@ require_once "../config/database.php";
 require_once "../includes/functions.php";
 require_once "../includes/mail.php";
 
+// Constants for login security
+define('MAX_LOGIN_ATTEMPTS', 5);
+define('LOCKOUT_TIME', 15 * 60); // 15 minutes in seconds
+
 $login_err = "";
+
+function clearExpiredAttempts($user_id, $conn) {
+    $sql = "DELETE FROM login_attempts 
+            WHERE id = ? 
+            AND success = 0 
+            AND attempted_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE)";
+    $stmt = mysqli_prepare($conn, $sql);
+    mysqli_stmt_bind_param($stmt, "i", $user_id);
+    mysqli_stmt_execute($stmt);
+}
+
+function isUserLockedOut($username, $conn) {
+    $sql = "SELECT id FROM users WHERE username = ?";
+    $stmt = mysqli_prepare($conn, $sql);
+    mysqli_stmt_bind_param($stmt, "s", $username);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $user = mysqli_fetch_array($result);
+    
+    if ($user) {
+        // First clear expired attempts
+        clearExpiredAttempts($user['id'], $conn);
+        
+        // Then check remaining failed attempts
+        $sql = "SELECT COUNT(*) as failed_attempts 
+                FROM login_attempts 
+                WHERE user_id = ? 
+                AND success = 0 
+                AND attempted_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)";
+        
+        $stmt = mysqli_prepare($conn, $sql);
+        mysqli_stmt_bind_param($stmt, "i", $user['id']);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $attempts = mysqli_fetch_array($result);
+        
+        return $attempts['failed_attempts'] >= MAX_LOGIN_ATTEMPTS;
+    }
+    return false;
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Check if this is an OTP verification
@@ -20,6 +64,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $user = mysqli_fetch_array(mysqli_stmt_get_result($stmt));
                 
                 if($user) {
+                    // Record successful login
+                    $sql = "INSERT INTO login_attempts (user_id, ip_address, success) VALUES (?, ?, 1)";
+                    $stmt = mysqli_prepare($conn, $sql);
+                    mysqli_stmt_bind_param($stmt, "is", $user["id"], $_SERVER['REMOTE_ADDR']);
+                    mysqli_stmt_execute($stmt);
+                    
                     // OTP verified, log the user in
                     $_SESSION["loggedin"] = true;
                     $_SESSION["id"] = $user["id"];
@@ -53,24 +103,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 if(mysqli_num_rows($result) == 1){
                     $user = mysqli_fetch_array($result);
                     
-                    if(password_verify($password, $user["password"])){
-                        // Generate secure OTP
-                        $otp_secret = generateSecureOTP();
+                    // Clear any expired attempts before checking lockout
+                    clearExpiredAttempts($user['id'], $conn);
+            
+                    // Check if user is locked out
+                    if (isUserLockedOut($username, $conn)) {
+                        $login_err = "Account is temporarily locked due to too many failed attempts. Please try again in 15 minutes.";
+                    } else {
+                        if(password_verify($password, $user["password"])){
+                            // Record successful initial login
+                            $sql = "INSERT INTO login_attempts (user_id, ip_address, success) VALUES (?, ?, 1)";
+                            $stmt = mysqli_prepare($conn, $sql);
+                            mysqli_stmt_bind_param($stmt, "is", $user["id"], $_SERVER['REMOTE_ADDR']);
+                            mysqli_stmt_execute($stmt);
                         
-                        // Store OTP and timestamp in session
-                        $_SESSION["pending_user_id"] = $user["id"];
-                        $_SESSION["otp_secret"] = $otp_secret;
-                        $_SESSION["otp_time"] = time();
+                            // Generate secure OTP
+                            $otp_secret = generateSecureOTP();
                         
-                        // Send OTP via email
-                        if(sendOTPEmail($user["email"], $otp_secret)) {
+                            // Store OTP and timestamp in session
+                            $_SESSION["pending_user_id"] = $user["id"];
+                            $_SESSION["otp_secret"] = $otp_secret;
+                            $_SESSION["otp_time"] = time();
+                        
+                            // Send OTP via email
+                            if(sendOTPEmail($user["email"], $otp_secret)) {
                             header("location: verify_otp.php");
                             exit;
-                        } else {
+                            } else {
                             $login_err = "Failed to send OTP email. Please try again.";
-                        }
-                    } else {
+                            }
+                        } else {
+                        // Record failed attempt
+                        $sql = "INSERT INTO login_attempts (user_id, ip_address, success) VALUES (?, ?, 0)";
+                        $stmt = mysqli_prepare($conn, $sql);
+                        mysqli_stmt_bind_param($stmt, "is", $user["id"], $_SERVER['REMOTE_ADDR']);
+                        mysqli_stmt_execute($stmt);
+
                         $login_err = "Invalid username or password.";
+                        }
                     }
                 } else {
                     $login_err = "Invalid username or password.";
