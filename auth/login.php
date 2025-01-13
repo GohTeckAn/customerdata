@@ -2,6 +2,7 @@
 session_start();
 require_once "../config/database.php";
 require_once "../includes/functions.php";
+require_once "../includes/mail.php";
 
 $login_err = "";
 
@@ -10,7 +11,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if(isset($_POST["otp"])) {
         $otp = trim($_POST["otp"]);
         if(isset($_SESSION["pending_user_id"]) && isset($_SESSION["otp_secret"])) {
-            if($otp == $_SESSION["otp_secret"]) {
+            if($otp === $_SESSION["otp_secret"]) {
                 // Get user details
                 $sql = "SELECT * FROM users WHERE id = ?";
                 $stmt = mysqli_prepare($conn, $sql);
@@ -28,6 +29,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     // Clear OTP session variables
                     unset($_SESSION["pending_user_id"]);
                     unset($_SESSION["otp_secret"]);
+                    unset($_SESSION["otp_time"]);
                     
                     header("location: ../index.php");
                     exit;
@@ -52,16 +54,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $user = mysqli_fetch_array($result);
                     
                     if(password_verify($password, $user["password"])){
-                        // Generate OTP
-                        $otp_secret = rand(100000, 999999);
+                        // Generate secure OTP
+                        $otp_secret = generateSecureOTP();
                         
-                        // Store OTP in session
+                        // Store OTP and timestamp in session
                         $_SESSION["pending_user_id"] = $user["id"];
                         $_SESSION["otp_secret"] = $otp_secret;
-                        $_SESSION["demo_otp"] = $otp_secret;
+                        $_SESSION["otp_time"] = time();
                         
-                        header("location: verify_otp.php");
-                        exit;
+                        // Send OTP via email
+                        if(sendOTPEmail($user["email"], $otp_secret)) {
+                            header("location: verify_otp.php");
+                            exit;
+                        } else {
+                            $login_err = "Failed to send OTP email. Please try again.";
+                        }
                     } else {
                         $login_err = "Invalid username or password.";
                     }

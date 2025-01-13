@@ -4,8 +4,19 @@ require_once "../config/database.php";
 require_once "../includes/functions.php";
 
 // Check if user is in OTP verification phase
-if(!isset($_SESSION["pending_user_id"]) || !isset($_SESSION["otp_secret"])) {
+if(!isset($_SESSION["pending_user_id"]) || !isset($_SESSION["otp_secret"]) || !isset($_SESSION["otp_time"])) {
     header("location: login.php");
+    exit;
+}
+
+// Check if OTP has expired (5 minutes)
+if (time() - $_SESSION["otp_time"] > 300) {
+    // Clear OTP session variables
+    unset($_SESSION["pending_user_id"]);
+    unset($_SESSION["otp_secret"]);
+    unset($_SESSION["otp_time"]);
+    
+    header("location: login.php?error=otp_expired");
     exit;
 }
 ?>
@@ -33,14 +44,13 @@ if(!isset($_SESSION["pending_user_id"]) || !isset($_SESSION["otp_secret"])) {
 <body>
     <div class="wrapper">
         <h2 class="text-center mb-4">Verify OTP</h2>
-        <p class="text-center">Enter the OTP code to complete login</p>
+        <p class="text-center">Enter the OTP code sent to your email to complete login</p>
         
-        <!-- For demo purposes, display OTP -->
-        <div class="alert alert-info">
-            <strong>Demo Mode:</strong> Your OTP is: <?php echo $_SESSION["demo_otp"]; ?>
-            <br>
-            <small>(In production, this would be sent to your email)</small>
+        <?php if(isset($_GET["error"]) && $_GET["error"] == "otp_expired"): ?>
+        <div class="alert alert-danger">
+            OTP has expired. Please login again to receive a new OTP.
         </div>
+        <?php endif; ?>
 
         <form action="login.php" method="post">
             <div class="form-group">

@@ -62,4 +62,24 @@ function checkAdmin() {
         exit;
     }
 }
+
+function generateSecureOTP($length = 6) {
+    $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    $otp = '';
+    $max = strlen($characters) - 1;
+    
+    // Ensure at least one of each type
+    $otp .= $characters[rand(0, 25)]; // uppercase
+    $otp .= $characters[rand(26, 51)]; // lowercase
+    $otp .= $characters[rand(52, 61)]; // number
+    $otp .= $characters[rand(62, $max)]; // special char
+    
+    // Fill the rest randomly
+    for($i = 0; $i < ($length - 4); $i++) {
+        $otp .= $characters[rand(0, $max)];
+    }
+    
+    // Shuffle the OTP to make it random
+    return str_shuffle($otp);
+}
 ?>
