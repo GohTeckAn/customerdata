@@ -2,10 +2,10 @@
 session_start();
 require_once "../config/database.php";
 require_once "../includes/functions.php";
+require_once "../includes/encryption.php";
 
 checkLogin();
 
-// Check if customer id is provided
 if(!isset($_GET["id"])) {
     header("location: ../index.php");
     exit();
@@ -13,7 +13,7 @@ if(!isset($_GET["id"])) {
 
 $customer_id = $_GET["id"];
 
-// Verify if user has permission to edit this customer
+// Get customer details
 $sql = "SELECT * FROM customers WHERE id = ?";
 $stmt = mysqli_prepare($conn, $sql);
 mysqli_stmt_bind_param($stmt, "i", $customer_id);
@@ -21,57 +21,82 @@ mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 $customer = mysqli_fetch_array($result);
 
+// Verify if user has permission to edit this customer
 if(!$customer || ($_SESSION["role"] !== "admin" && $customer["created_by"] !== $_SESSION["id"])) {
     header("location: ../index.php");
     exit();
 }
 
+// Decrypt customer data for display
+$customer = decryptCustomerData($customer);
+
 $errors = [];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $name = trim($_POST["name"]);
-    $email = trim($_POST["email"]);
-    $phone = trim($_POST["phone"]);
-    $birthday = trim($_POST["birthday"]);
-    $ic_number = trim($_POST["ic_number"]);
-    $payment_method = trim($_POST["payment_method"]);
-    $subscription_plan = trim($_POST["subscription_plan"]);
+    // Get and validate input
+    $customer_data = [
+        'name' => trim($_POST["name"]),
+        'email' => trim($_POST["email"]),
+        'phone' => trim($_POST["phone"]),
+        'birthday' => trim($_POST["birthday"]),
+        'ic_number' => trim($_POST["ic_number"]),
+        'payment_method' => trim($_POST["payment_method"]),
+        'subscription_plan' => trim($_POST["subscription_plan"])
+    ];
 
-    if (!validatePhoneNumber($phone)) {
+    // Validate phone number
+    if (!validatePhoneNumber($customer_data['phone'])) {
         $errors[] = "Phone number must start with +60 followed by 9-10 digits.";
     }
 
-    if (!validateIC($ic_number)) {
+    // Validate IC
+    if (!validateIC($customer_data['ic_number'])) {
         $errors[] = "IC number must be exactly 12 digits.";
     }
 
     if (empty($errors)) {
         // Track changes for audit log
         $changes = [];
-        foreach(['name', 'email', 'phone', 'birthday', 'ic_number', 'payment_method', 'subscription_plan'] as $field) {
-            if($customer[$field] !== ${$field}) {
+        foreach($customer_data as $field => $value) {
+            if($customer[$field] !== $value) {
                 $changes[$field] = [
                     'old' => $customer[$field],
-                    'new' => ${$field}
+                    'new' => $value
                 ];
             }
         }
 
         if(!empty($changes)) {
-            $sql = "UPDATE customers SET name=?, email=?, phone=?, birthday=?, ic_number=?, payment_method=?, subscription_plan=? WHERE id=?";
+            // Encrypt the new data
+            $encrypted_data = encryptCustomerData($customer_data);
+            
+            $sql = "UPDATE customers SET 
+                    name=?, email=?, phone=?, birthday=?, 
+                    ic_number=?, payment_method=?, subscription_plan=? 
+                    WHERE id=?";
+            
             $stmt = mysqli_prepare($conn, $sql);
-            mysqli_stmt_bind_param($stmt, "sssssssi", $name, $email, $phone, $birthday, $ic_number, $payment_method, $subscription_plan, $customer_id);
+            mysqli_stmt_bind_param($stmt, "sssssssi", 
+                $encrypted_data['name'],
+                $encrypted_data['email'],
+                $encrypted_data['phone'],
+                $customer_data['birthday'],
+                $encrypted_data['ic_number'],
+                $customer_data['payment_method'],
+                $customer_data['subscription_plan'],
+                $customer_id
+            );
             
             if(mysqli_stmt_execute($stmt)) {
-                // Create audit log
+                // Create audit log with unencrypted data for readability
                 createAuditLog($conn, $_SESSION["id"], "update", $customer_id, json_encode($changes));
-                header("location: ../index.php");
+                header("location: view.php?id=" . $customer_id);
                 exit();
             } else {
                 $errors[] = "Something went wrong. Please try again later.";
             }
         } else {
-            header("location: ../index.php");
+            header("location: view.php?id=" . $customer_id);
             exit();
         }
     }

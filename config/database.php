@@ -70,6 +70,14 @@ $sql = "CREATE TABLE IF NOT EXISTS login_attempts (
 )";
 mysqli_query($conn, $sql);
 
+// Modify customers table for encrypted data
+$sql = "ALTER TABLE customers 
+        MODIFY name TEXT NOT NULL,
+        MODIFY email TEXT NOT NULL,
+        MODIFY phone TEXT NOT NULL,
+        MODIFY ic_number TEXT NOT NULL";
+mysqli_query($conn, $sql);
+
 // Create default admin account if not exists
 $default_admin_password = password_hash('admin123', PASSWORD_DEFAULT);
 $sql = "INSERT IGNORE INTO users (username, password, role, email) 

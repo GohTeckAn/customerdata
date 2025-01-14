@@ -2,6 +2,7 @@
 session_start();
 require_once "../config/database.php";
 require_once "../includes/functions.php";
+require_once "../includes/encryption.php";
 
 checkLogin();
 
@@ -13,8 +14,8 @@ if(!isset($_GET["id"])) {
 
 $customer_id = $_GET["id"];
 
-// Get customer details with staff name
-$sql = "SELECT c.*, u.username as staff_name 
+// Get customer details
+$sql = "SELECT c.*, u.username as created_by_username 
         FROM customers c 
         JOIN users u ON c.created_by = u.id 
         WHERE c.id = ?";
@@ -24,13 +25,17 @@ mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 $customer = mysqli_fetch_array($result);
 
-// Check if customer exists and user has permission to view
+// Verify if user has permission to view this customer
 if(!$customer || ($_SESSION["role"] !== "admin" && $customer["created_by"] !== $_SESSION["id"])) {
     header("location: ../index.php");
     exit();
 }
 
-// Get audit logs for this customer if user is admin
+// Decrypt sensitive data
+$customer = decryptCustomerData($customer);
+
+// Get audit logs if user is admin
+$audit_logs = [];
 if($_SESSION["role"] === "admin") {
     $sql = "SELECT al.*, u.username 
             FROM audit_logs al 
@@ -43,7 +48,6 @@ if($_SESSION["role"] === "admin") {
     $audit_logs = mysqli_stmt_get_result($stmt);
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -109,7 +113,7 @@ if($_SESSION["role"] === "admin") {
                     </tr>
                     <tr>
                         <th>Created By</th>
-                        <td><?php echo htmlspecialchars($customer["staff_name"]); ?></td>
+                        <td><?php echo htmlspecialchars($customer["created_by_username"]); ?></td>
                     </tr>
                     <tr>
                         <th>Created At</th>

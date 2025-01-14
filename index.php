@@ -2,21 +2,35 @@
 session_start();
 require_once "config/database.php";
 require_once "includes/functions.php";
+require_once "includes/encryption.php";
 
 // Check if user is logged in
 checkLogin();
 
-// Fetch customers created by current staff (or all customers if admin)
-$sql = $_SESSION["role"] === "admin" 
-    ? "SELECT c.*, u.username as staff_name FROM customers c JOIN users u ON c.created_by = u.id" 
-    : "SELECT c.*, u.username as staff_name FROM customers c JOIN users u ON c.created_by = u.id WHERE c.created_by = ?";
+// Get all customers or only those created by the current user
+$sql = "SELECT c.*, u.username as created_by_username 
+        FROM customers c 
+        JOIN users u ON c.created_by = u.id";
 
+if($_SESSION["role"] !== "admin") {
+    $sql .= " WHERE c.created_by = ?";
+}
+
+$sql .= " ORDER BY c.created_at DESC";
 $stmt = mysqli_prepare($conn, $sql);
+
 if($_SESSION["role"] !== "admin") {
     mysqli_stmt_bind_param($stmt, "i", $_SESSION["id"]);
 }
+
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
+
+// Fetch all customers and decrypt their data
+$customers = [];
+while($row = mysqli_fetch_array($result)) {
+    $customers[] = decryptCustomerData($row);
+}
 ?>
 
 <!DOCTYPE html>
@@ -70,22 +84,22 @@ $result = mysqli_stmt_get_result($stmt);
                 </tr>
             </thead>
             <tbody>
-                <?php while($row = mysqli_fetch_array($result)): ?>
+                <?php foreach($customers as $customer): ?>
                     <tr>
-                        <td><?php echo htmlspecialchars($row['name']); ?></td>
-                        <td><?php echo htmlspecialchars($row['email']); ?></td>
-                        <td><?php echo htmlspecialchars($row['phone']); ?></td>
-                        <td><?php echo htmlspecialchars($row['ic_number']); ?></td>
-                        <td><?php echo htmlspecialchars($row['subscription_plan']); ?></td>
-                        <td><?php echo htmlspecialchars($row['staff_name']); ?></td>
+                        <td><?php echo htmlspecialchars($customer['name']); ?></td>
+                        <td><?php echo htmlspecialchars($customer['email']); ?></td>
+                        <td><?php echo htmlspecialchars($customer['phone']); ?></td>
+                        <td><?php echo htmlspecialchars($customer['ic_number']); ?></td>
+                        <td><?php echo htmlspecialchars($customer['subscription_plan']); ?></td>
+                        <td><?php echo htmlspecialchars($customer['created_by_username']); ?></td>
                         <td>
-                            <a href="customers/view.php?id=<?php echo $row['id']; ?>" class="btn btn-info btn-sm">View</a>
-                            <?php if($_SESSION["role"] === "admin" || $_SESSION["id"] === $row['created_by']): ?>
-                                <a href="customers/edit.php?id=<?php echo $row['id']; ?>" class="btn btn-primary btn-sm">Edit</a>
+                            <a href="customers/view.php?id=<?php echo $customer['id']; ?>" class="btn btn-info btn-sm">View</a>
+                            <?php if($_SESSION["role"] === "admin" || $_SESSION["id"] === $customer['created_by']): ?>
+                                <a href="customers/edit.php?id=<?php echo $customer['id']; ?>" class="btn btn-primary btn-sm">Edit</a>
                             <?php endif; ?>
                         </td>
                     </tr>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             </tbody>
         </table>
     </div>

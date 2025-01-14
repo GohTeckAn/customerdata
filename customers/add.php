@@ -2,6 +2,7 @@
 session_start();
 require_once "../config/database.php";
 require_once "../includes/functions.php";
+require_once "../includes/encryption.php";
 
 checkLogin();
 
@@ -9,45 +10,51 @@ $errors = [];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Validate input
-    $name = trim($_POST["name"]);
-    $email = trim($_POST["email"]);
-    $phone = trim($_POST["phone"]);
-    $birthday = trim($_POST["birthday"]);
-    $ic_number = trim($_POST["ic_number"]);
-    $payment_method = trim($_POST["payment_method"]);
-    $subscription_plan = trim($_POST["subscription_plan"]);
+    $customer_data = [
+        'name' => trim($_POST["name"]),
+        'email' => trim($_POST["email"]),
+        'phone' => trim($_POST["phone"]),
+        'birthday' => trim($_POST["birthday"]),
+        'ic_number' => trim($_POST["ic_number"]),
+        'payment_method' => trim($_POST["payment_method"]),
+        'subscription_plan' => trim($_POST["subscription_plan"])
+    ];
 
     // Validate phone number
-    if (!validatePhoneNumber($phone)) {
+    if (!validatePhoneNumber($customer_data['phone'])) {
         $errors[] = "Phone number must start with +60 followed by 9-10 digits.";
     }
 
     // Validate IC
-    if (!validateIC($ic_number)) {
+    if (!validateIC($customer_data['ic_number'])) {
         $errors[] = "IC number must be exactly 12 digits.";
     }
 
     if (empty($errors)) {
+        // Encrypt sensitive data
+        $encrypted_data = encryptCustomerData($customer_data);
+        
         $sql = "INSERT INTO customers (name, email, phone, birthday, ic_number, payment_method, subscription_plan, created_by) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
         if($stmt = mysqli_prepare($conn, $sql)){
-            mysqli_stmt_bind_param($stmt, "sssssssi", $name, $email, $phone, $birthday, $ic_number, $payment_method, $subscription_plan, $_SESSION["id"]);
+            mysqli_stmt_bind_param($stmt, "sssssssi", 
+                $encrypted_data['name'], 
+                $encrypted_data['email'], 
+                $encrypted_data['phone'], 
+                $customer_data['birthday'], 
+                $encrypted_data['ic_number'], 
+                $customer_data['payment_method'], 
+                $customer_data['subscription_plan'], 
+                $_SESSION["id"]
+            );
             
             if(mysqli_stmt_execute($stmt)){
                 // Create audit log
                 $customer_id = mysqli_insert_id($conn);
                 $changes = json_encode([
                     "action" => "create",
-                    "fields" => [
-                        "name" => $name,
-                        "email" => $email,
-                        "phone" => $phone,
-                        "birthday" => $birthday,
-                        "ic_number" => $ic_number,
-                        "payment_method" => $payment_method,
-                        "subscription_plan" => $subscription_plan
-                    ]
+                    "fields" => $customer_data // Store unencrypted data in audit log for readability
                 ]);
                 createAuditLog($conn, $_SESSION["id"], "create", $customer_id, $changes);
                 
