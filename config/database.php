@@ -73,6 +73,18 @@ mysqli_query($conn, $sql);
 // Create default admin account if not exists
 $default_admin_password = password_hash('admin123', PASSWORD_DEFAULT);
 $sql = "INSERT IGNORE INTO users (username, password, role, email) 
-        VALUES ('admin', '$default_admin_password', 'admin', 'teckangoh@gmail.com')";
+        VALUES ('Goh', '$default_admin_password', 'admin', 'teckangoh@gmail.com')";
+mysqli_query($conn, $sql);
+$sql = "INSERT IGNORE INTO users (username, password, role, email) 
+        VALUES ('Lau', '$default_admin_password', 'admin', 'wenxuanyeah@gmail.com')";
+mysqli_query($conn, $sql);
+$sql = "INSERT IGNORE INTO users (username, password, role, email) 
+        VALUES ('Najmi', '$default_admin_password', 'admin', 'knajmi2003@gmail.com')";
+mysqli_query($conn, $sql);
+$sql = "INSERT IGNORE INTO users (username, password, role, email) 
+        VALUES ('Mustaqim', '$default_admin_password', 'admin', 'mohamadmustaqim02@gmail.com')";
+mysqli_query($conn, $sql);
+$sql = "INSERT IGNORE INTO users (username, password, role, email) 
+        VALUES ('Irfan', '$default_admin_password', 'admin', 'Irfanyazid16@gmail.com')";
 mysqli_query($conn, $sql);
 ?>
