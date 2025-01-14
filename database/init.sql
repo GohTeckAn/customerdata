@@ -45,3 +45,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 -- Create default admin account (password: admin123)
 INSERT IGNORE INTO users (username, password, role, email) 
 VALUES ('admin', '$2y$10$8tl8.x9XAzXNp.mDQ8Dadu2T9VSfSH5f4/0mJJw0pfYE.K3.8nZ8q', 'admin', 'teckangoh@gmail.com');
+VALUES ('wx', '$2y$10$8tl8.x9XAzXNp.mDQ8Dadu2T9VSfSH5f4/0mJJw0pfYE.K3.8nZ8q', 'admin', 'ai220262@student.uthm.edu.my');
+VALUES ('najmi', '$2y$10$8tl8.x9XAzXNp.mDQ8Dadu2T9VSfSH5f4/0mJJw0pfYE.K3.8nZ8q', 'admin', 'knajmi@gmail.com');
+VALUES ('irfan', '$2y$10$8tl8.x9XAzXNp.mDQ8Dadu2T9VSfSH5f4/0mJJw0pfYE.K3.8nZ8q', 'admin', 'lrfanyazid16@gmail.com');
+VALUES ('mustaqim', '$2y$10$8tl8.x9XAzXNp.mDQ8Dadu2T9VSfSH5f4/0mJJw0pfYE.K3.8nZ8q', 'admin', 'mohamadmustaqim02@gmail.com');
