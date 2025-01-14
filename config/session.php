@@ -4,8 +4,8 @@ if (session_status() === PHP_SESSION_NONE) {
     // Session configuration - must be set before session_start()
     if (strpos($_SERVER['PHP_SELF'], 'verify_otp.php') === false) {
         // Only apply short timeout for regular pages, not OTP verification
-        ini_set('session.gc_maxlifetime', 20);    // 20 seconds timeout
-        ini_set('session.cookie_lifetime', 20);   
+        ini_set('session.gc_maxlifetime', 60);    // 20 seconds timeout
+        ini_set('session.cookie_lifetime', 60);   
     } else {
         // Use longer timeout for OTP verification
         ini_set('session.gc_maxlifetime', 300);    // 5 minutes for OTP
