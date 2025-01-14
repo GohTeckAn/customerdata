@@ -10,7 +10,7 @@ if(!isset($_SESSION["pending_user_id"]) || !isset($_SESSION["otp_secret"]) || !i
 }
 
 // Check if OTP has expired (5 minutes)
-if (time() - $_SESSION["otp_time"] > 300) {
+if (time() - $_SESSION["otp_time"] > 10) {
     // Clear OTP session variables
     unset($_SESSION["pending_user_id"]);
     unset($_SESSION["otp_secret"]);

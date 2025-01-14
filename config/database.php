@@ -30,10 +30,28 @@ $sql = "CREATE TABLE IF NOT EXISTS users (
     phone VARCHAR(15),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     otp_secret VARCHAR(32) DEFAULT NULL,
-    otp_valid_until TIMESTAMP NULL DEFAULT NULL
+    otp_valid_until TIMESTAMP NULL DEFAULT NULL,
+    login_attempts INT DEFAULT 0,
+    locked_until TIMESTAMP NULL DEFAULT NULL
 )";
 mysqli_query($conn, $sql);
 
+// Add new columns if they don't exist
+$sql = "SHOW COLUMNS FROM users LIKE 'login_attempts'";
+$result = mysqli_query($conn, $sql);
+if (mysqli_num_rows($result) == 0) {
+    $sql = "ALTER TABLE users ADD COLUMN login_attempts INT DEFAULT 0";
+    mysqli_query($conn, $sql);
+}
+
+$sql = "SHOW COLUMNS FROM users LIKE 'locked_until'";
+$result = mysqli_query($conn, $sql);
+if (mysqli_num_rows($result) == 0) {
+    $sql = "ALTER TABLE users ADD COLUMN locked_until TIMESTAMP NULL DEFAULT NULL";
+    mysqli_query($conn, $sql);
+}
+
+// Create customers table
 $sql = "CREATE TABLE IF NOT EXISTS customers (
     id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) NOT NULL,
@@ -50,6 +68,7 @@ $sql = "CREATE TABLE IF NOT EXISTS customers (
 )";
 mysqli_query($conn, $sql);
 
+// Create audit logs table
 $sql = "CREATE TABLE IF NOT EXISTS audit_logs (
     id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
@@ -61,12 +80,13 @@ $sql = "CREATE TABLE IF NOT EXISTS audit_logs (
 )";
 mysqli_query($conn, $sql);
 
+// Create login attempts table
 $sql = "CREATE TABLE IF NOT EXISTS login_attempts (
     id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     ip_address VARCHAR(45) NOT NULL,
     success INT(1) NOT NULL,
-    attempted_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    attempted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 )";
 mysqli_query($conn, $sql);
 

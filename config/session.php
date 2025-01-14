@@ -1,7 +1,16 @@
 <?php
-// Session timeout settings (in seconds)
-ini_set('session.gc_maxlifetime', 1800);    // Server-side timeout (30 minutes)
-ini_set('session.cookie_lifetime', 1800);    // Client-side cookie timeout
+// First check if session is already active
+if (session_status() === PHP_SESSION_NONE) {
+    // Session configuration - must be set before session_start()
+    if (strpos($_SERVER['PHP_SELF'], 'verify_otp.php') === false) {
+        // Only apply short timeout for regular pages, not OTP verification
+        ini_set('session.gc_maxlifetime', 20);    // 20 seconds timeout
+        ini_set('session.cookie_lifetime', 20);   
+    } else {
+        // Use longer timeout for OTP verification
+        ini_set('session.gc_maxlifetime', 300);    // 5 minutes for OTP
+        ini_set('session.cookie_lifetime', 300);   
+    }
 
 // Session security settings
 ini_set('session.cookie_httponly', 1);       // Prevent JavaScript access to session cookie
@@ -13,9 +22,12 @@ ini_set('session.cookie_samesite', 'Lax');   // Protect against CSRF attacks
 // Session name (avoid default 'PHPSESSID')
 session_name('TM_SECURE_SESSION');
 
+session_start();
+}
+
 // Custom session handling
 function sessionTimeoutCheck() {
-    $max_lifetime = 1800; // 30 minutes in seconds
+    $max_lifetime = 20; // 30 minutes in seconds
     
     if (isset($_SESSION['LAST_ACTIVITY'])) {
         $inactive_time = time() - $_SESSION['LAST_ACTIVITY'];
@@ -44,11 +56,6 @@ function regenerateSessionId() {
         session_regenerate_id(true);
         $_SESSION['CREATED'] = time();
     }
-}
-
-// Start session with secure settings
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
 }
 
 // Run security checks

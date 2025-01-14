@@ -92,6 +92,8 @@ $result = mysqli_query($conn, $sql);
     <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
         <a class="navbar-brand" href="../index.php">TM Customer Data System</a>
         <div class="navbar-nav ml-auto">
+        <a class="nav-item nav-link" href="../index.php">Dashboard</a>
+        <a class="nav-item nav-link" href="manage_users.php">Manage Users</a>
             <a class="nav-item nav-link" href="audit_logs.php">Audit Logs</a>
             <a class="nav-item nav-link" href="../auth/logout.php">Logout</a>
         </div>

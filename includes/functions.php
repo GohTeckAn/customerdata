@@ -1,4 +1,6 @@
 <?php
+require_once dirname(__DIR__) . "/config/session.php";
+
 function validatePassword($password)
 {
     // Password requirements:
